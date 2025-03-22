@@ -236,3 +236,77 @@ button:hover {
     border-top-color: #444;
   }
 }
+
+/* Add these styles to your existing CSS file */
+
+.custom-url-group {
+  margin-top: 15px;
+}
+
+.custom-url-input {
+  display: flex;
+  align-items: center;
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.base-url {
+  background-color: #e0e0e0;
+  padding: 12px;
+  color: #555;
+  font-size: 16px;
+  white-space: nowrap;
+  border-right: 1px solid #ddd;
+}
+
+.custom-url-input input {
+  flex: 1;
+  border: none;
+  background-color: #f5f5f5;
+  padding: 12px;
+  font-size: 16px;
+}
+
+.custom-url-input input:focus {
+  outline: none;
+  background-color: #fff;
+}
+
+.hint {
+  font-size: 12px;
+  color: #777;
+  margin-top: 5px;
+  margin-bottom: 0;
+}
+
+/* Availability status styles */
+.availability {
+  font-size: 13px;
+  margin-top: 5px;
+  margin-bottom: 0;
+  min-height: 18px;
+}
+
+.availability-success {
+  color: #2ecc71;
+}
+
+.availability-error {
+  color: #e74c3c;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 600px) {
+  .custom-url-input {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .base-url {
+    border-right: none;
+    border-bottom: 1px solid #ddd;
+    text-align: center;
+  }
+}

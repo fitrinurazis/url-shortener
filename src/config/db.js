@@ -22,24 +22,42 @@ async function initDb() {
     );
     await connection.query(`USE ${process.env.DB_NAME || "url_shortener"}`);
 
-    // Create URLs table
+    // Create URLs table with custom_code field
     await connection.query(`
       CREATE TABLE IF NOT EXISTS urls (
         id INT AUTO_INCREMENT PRIMARY KEY,
         original_url VARCHAR(2083) NOT NULL,
         short_code VARCHAR(10) NOT NULL UNIQUE,
+        custom_code VARCHAR(50) UNIQUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         clicks INT DEFAULT 0
       )
     `);
 
-    // Cek apakah kolom clicks sudah ada, jika belum, tambahkan
+    // Check if custom_code column exists, if not add it
+    try {
+      await connection.query(`
+        ALTER TABLE urls ADD COLUMN IF NOT EXISTS custom_code VARCHAR(50) UNIQUE
+      `);
+    } catch (error) {
+      // If database doesn't support "ADD COLUMN IF NOT EXISTS", use alternative approach
+      const [columns] = await connection.query(`
+        SHOW COLUMNS FROM urls LIKE 'custom_code'
+      `);
+
+      if (columns.length === 0) {
+        await connection.query(`
+          ALTER TABLE urls ADD COLUMN custom_code VARCHAR(50) UNIQUE
+        `);
+      }
+    }
+
+    // Check if clicks column exists
     try {
       await connection.query(`
         ALTER TABLE urls ADD COLUMN IF NOT EXISTS clicks INT DEFAULT 0
       `);
     } catch (error) {
-      // Jika database tidak mendukung "ADD COLUMN IF NOT EXISTS", gunakan pendekatan lain
       const [columns] = await connection.query(`
         SHOW COLUMNS FROM urls LIKE 'clicks'
       `);
