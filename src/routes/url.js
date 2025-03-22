@@ -1,104 +1,152 @@
 const express = require("express");
-const shortid = require("shortid");
+const router = express.Router();
 const { pool } = require("../config/db");
+const { nanoid } = require("nanoid");
+const { logInfo, logError } = require("../middleware/logger");
 const config = require("../config/config");
 
-const router = express.Router();
+// Generate a short code
+function generateShortCode() {
+  return nanoid(6); // Generate a 6-character unique ID
+}
 
-// Create a short URL
+// Create a shortened URL
 router.post("/shorten", async (req, res) => {
-  const { originalUrl } = req.body;
-
-  if (!originalUrl) {
-    return res.status(400).json({ error: "Original URL is required" });
-  }
-
   try {
+    const { originalUrl } = req.body;
+
+    if (!originalUrl) {
+      return res.status(400).json({ error: "URL is required" });
+    }
+
+    // Validate URL format
+    try {
+      new URL(originalUrl);
+    } catch (err) {
+      return res.status(400).json({ error: "Invalid URL format" });
+    }
+
+    const connection = await pool.getConnection();
+
     // Check if URL already exists in database
-    const [existingUrls] = await pool.query(
-      "SELECT short_code FROM urls WHERE original_url = ?",
+    const [existingUrls] = await connection.query(
+      "SELECT * FROM urls WHERE original_url = ?",
       [originalUrl]
     );
 
+    let shortCode;
+
     if (existingUrls.length > 0) {
-      return res.json({
-        originalUrl,
-        shortUrl: `${config.server.baseUrl}/${existingUrls[0].short_code}`,
-        shortCode: existingUrls[0].short_code,
-      });
+      // URL already exists, use the existing short code
+      shortCode = existingUrls[0].short_code;
+    } else {
+      // Generate a new short code
+      shortCode = generateShortCode();
+
+      // Insert the new URL into the database
+      await connection.query(
+        "INSERT INTO urls (original_url, short_code) VALUES (?, ?)",
+        [originalUrl, shortCode]
+      );
     }
 
-    // Generate a new short code
-    const shortCode = shortid.generate();
+    connection.release();
 
-    // Save to database
-    await pool.query(
-      "INSERT INTO urls (original_url, short_code) VALUES (?, ?)",
-      [originalUrl, shortCode]
-    );
+    const baseUrl =
+      config.server.baseUrl || `http://localhost:${config.server.port}`;
+    const shortUrl = `${baseUrl}/${shortCode}`;
 
-    return res.json({
+    logInfo(`URL shortened: ${originalUrl} -> ${shortUrl}`);
+
+    res.json({
       originalUrl,
-      shortUrl: `${config.server.baseUrl}/${shortCode}`,
+      shortUrl,
       shortCode,
     });
   } catch (error) {
-    console.error("Error creating short URL:", error);
-    return res.status(500).json({ error: "Server error" });
+    logError(error, "Error shortening URL");
+    res.status(500).json({ error: "Server error" });
   }
 });
 
-// Redirect to original URL
-router.get("/:code", async (req, res) => {
-  const { code } = req.params;
-
+// Redirect to the original URL
+router.get("/:shortCode", async (req, res) => {
   try {
-    // Get the URL and update click count
-    await pool.query(
+    const { shortCode } = req.params;
+
+    const connection = await pool.getConnection();
+
+    // Find the original URL in the database
+    const [urls] = await connection.query(
+      "SELECT * FROM urls WHERE short_code = ?",
+      [shortCode]
+    );
+
+    if (urls.length === 0) {
+      connection.release();
+      return res.status(404).send("URL not found");
+    }
+
+    // Increment the click count
+    await connection.query(
       "UPDATE urls SET clicks = clicks + 1 WHERE short_code = ?",
-      [code]
+      [shortCode]
     );
 
-    const [urls] = await pool.query(
-      "SELECT original_url FROM urls WHERE short_code = ?",
-      [code]
-    );
+    connection.release();
 
-    if (urls.length === 0) {
-      return res.status(404).json({ error: "URL not found" });
-    }
+    const originalUrl = urls[0].original_url;
+    logInfo(`Redirecting ${shortCode} to ${originalUrl}`);
 
-    return res.redirect(urls[0].original_url);
+    // Instead of direct redirect, use HTML with meta refresh
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta http-equiv="refresh" content="0;url=${originalUrl}">
+          <title>Redirecting...</title>
+        </head>
+        <body>
+          <p>Redirecting to ${originalUrl}...</p>
+          <p>If you are not redirected automatically, <a href="${originalUrl}">click here</a>.</p>
+          <script>window.location.href = "${originalUrl}";</script>
+        </body>
+      </html>
+    `);
   } catch (error) {
-    console.error("Error redirecting to URL:", error);
-    return res.status(500).json({ error: "Server error" });
+    logError(error, "Error redirecting to URL");
+    res.status(500).send("Server error");
   }
 });
 
-// Get statistics for a URL
-router.get("/stats/:code", async (req, res) => {
-  const { code } = req.params;
-
+// Get URL stats
+router.get("/api/stats/:shortCode", async (req, res) => {
   try {
-    const [urls] = await pool.query(
-      "SELECT original_url, created_at, clicks FROM urls WHERE short_code = ?",
-      [code]
+    const { shortCode } = req.params;
+
+    const connection = await pool.getConnection();
+
+    // Find the URL stats in the database
+    const [urls] = await connection.query(
+      "SELECT * FROM urls WHERE short_code = ?",
+      [shortCode]
     );
+
+    connection.release();
 
     if (urls.length === 0) {
       return res.status(404).json({ error: "URL not found" });
     }
 
-    return res.json({
-      shortCode: code,
+    res.json({
+      shortCode,
       originalUrl: urls[0].original_url,
-      shortUrl: `${config.server.baseUrl}/${code}`,
-      createdAt: urls[0].created_at,
       clicks: urls[0].clicks,
+      createdAt: urls[0].created_at,
     });
   } catch (error) {
-    console.error("Error getting URL stats:", error);
-    return res.status(500).json({ error: "Server error" });
+    logError(error, "Error getting URL stats");
+    res.status(500).json({ error: "Server error" });
   }
 });
 

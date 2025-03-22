@@ -1,21 +1,29 @@
 {
   "name": "url-shortener",
   "version": "1.0.0",
+  "description": "A simple URL shortener service",
   "main": "src/app.js",
   "scripts": {
-    "start": "nodemon /src/app.js"
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "keywords": [
+    "url",
+    "shortener",
+    "express",
+    "mysql"
+  ],
+  "author": "Fitri Nurazis",
+  "license": "MIT",
   "dependencies": {
-    "body-parser": "^1.20.3",
-    "dotenv": "^16.4.7",
-    "ejs": "^3.1.10",
-    "express": "^4.21.2",
-    "mysql2": "^3.14.0",
-    "nodemon": "^3.1.9",
-    "shortid": "^2.2.17"
+    "body-parser": "^1.20.2",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "mysql2": "^3.6.1",
+    "nanoid": "^3.3.6"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
   }
 }
