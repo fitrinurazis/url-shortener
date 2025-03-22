@@ -1,6 +1,7 @@
 const express = require("express");
 const shortid = require("shortid");
 const { pool } = require("../config/db");
+const config = require("../config/config");
 
 const router = express.Router();
 
@@ -22,7 +23,7 @@ router.post("/shorten", async (req, res) => {
     if (existingUrls.length > 0) {
       return res.json({
         originalUrl,
-        shortUrl: `${process.env.BASE_URL}/${existingUrls[0].short_code}`,
+        shortUrl: `${config.server.baseUrl}/${existingUrls[0].short_code}`,
         shortCode: existingUrls[0].short_code,
       });
     }
@@ -38,7 +39,7 @@ router.post("/shorten", async (req, res) => {
 
     return res.json({
       originalUrl,
-      shortUrl: `${process.env.BASE_URL}/${shortCode}`,
+      shortUrl: `${config.server.baseUrl}/${shortCode}`,
       shortCode,
     });
   } catch (error) {
@@ -52,6 +53,12 @@ router.get("/:code", async (req, res) => {
   const { code } = req.params;
 
   try {
+    // Get the URL and update click count
+    await pool.query(
+      "UPDATE urls SET clicks = clicks + 1 WHERE short_code = ?",
+      [code]
+    );
+
     const [urls] = await pool.query(
       "SELECT original_url FROM urls WHERE short_code = ?",
       [code]
@@ -64,6 +71,33 @@ router.get("/:code", async (req, res) => {
     return res.redirect(urls[0].original_url);
   } catch (error) {
     console.error("Error redirecting to URL:", error);
+    return res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Get statistics for a URL
+router.get("/stats/:code", async (req, res) => {
+  const { code } = req.params;
+
+  try {
+    const [urls] = await pool.query(
+      "SELECT original_url, created_at, clicks FROM urls WHERE short_code = ?",
+      [code]
+    );
+
+    if (urls.length === 0) {
+      return res.status(404).json({ error: "URL not found" });
+    }
+
+    return res.json({
+      shortCode: code,
+      originalUrl: urls[0].original_url,
+      shortUrl: `${config.server.baseUrl}/${code}`,
+      createdAt: urls[0].created_at,
+      clicks: urls[0].clicks,
+    });
+  } catch (error) {
+    console.error("Error getting URL stats:", error);
     return res.status(500).json({ error: "Server error" });
   }
 });

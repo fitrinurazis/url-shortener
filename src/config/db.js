@@ -1,11 +1,11 @@
 const mysql = require("mysql2/promise");
-require("dotenv").config();
+const config = require("./config");
 
 const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+  host: config.db.host,
+  user: config.db.user,
+  password: config.db.password,
+  database: config.db.database,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
@@ -18,9 +18,9 @@ async function initDb() {
 
     // Create database if it doesn't exist
     await connection.query(
-      `CREATE DATABASE IF NOT EXISTS ${process.env.DB_NAME}`
+      `CREATE DATABASE IF NOT EXISTS ${config.db.database}`
     );
-    await connection.query(`USE ${process.env.DB_NAME}`);
+    await connection.query(`USE ${config.db.database}`);
 
     // Create URLs table
     await connection.query(`
@@ -28,7 +28,8 @@ async function initDb() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         original_url VARCHAR(2083) NOT NULL,
         short_code VARCHAR(10) NOT NULL UNIQUE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        clicks INT DEFAULT 0
       )
     `);
 

@@ -3,10 +3,10 @@ const bodyParser = require("body-parser");
 const path = require("path");
 const { initDb } = require("./config/db");
 const urlRoutes = require("./routes/url");
-require("dotenv").config();
+const config = require("./config/config");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = config.server.port;
 
 // Initialize database
 initDb();
@@ -27,5 +27,5 @@ app.get("/", (req, res) => {
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log(`Visit ${process.env.BASE_URL} to use the URL shortener`);
+  console.log(`Visit ${config.server.baseUrl} to use the URL shortener`);
 });
