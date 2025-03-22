@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>URL Shortener</title>
-    <link rel="stylesheet" href="./css/style.css" />
+    <title>URL Shortener - url.kujaw.my.id</title>
+    <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
     <h1>URL Shortener</h1>
@@ -25,13 +25,19 @@
       <div class="result" id="result">
         <p>Your shortened URL:</p>
         <div class="url-container">
-          <span id="shortUrl" class="short-url url-text"></span>
-          <button onclick="copyToClipboard()" class="copy-btn">Copy</button>
+          <a class="short-url url-text" id="shortUrl" target="_blank"></a>
+          <button class="copy-btn" onclick="copyToClipboard()">Copy</button>
         </div>
-        <p>Original URL: <span id="originalUrlDisplay"></span></p>
+        <p class="original-url-display">
+          Original URL: <span id="originalUrlDisplay"></span>
+        </p>
       </div>
     </div>
 
-    <script src="./js/script.js"></script>
+    <div class="footer">
+      <p>&copy; 2025 Kujaw - Simple URL Shortener</p>
+    </div>
+
+    <script src="js/script.js"></script>
   </body>
 </html>
